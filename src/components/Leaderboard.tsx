@@ -210,7 +210,8 @@ export default function Leaderboard({
                 <th className="px-3 py-2 text-right">Total</th>
                 <th className="px-3 py-2 text-right">Today</th>
                 <th className="px-3 py-2 text-right">Thru</th>
-                <th className="px-3 py-2 text-right">Live Odds</th>
+                <th className="px-3 py-2 text-right" title="Odds before tournament started">Pre-Tourney Odds</th>
+                <th className="px-3 py-2 text-right" title="Live odds from sportsbooks — update manually">Live Odds</th>
               </tr>
             </thead>
             <tbody>
@@ -245,6 +246,10 @@ export default function Leaderboard({
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-400 text-xs">
                       {player ? (player.odds > 0 ? `+${player.odds.toLocaleString()}` : player.odds) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-yellow-300 text-xs">
+                      {/* Paste live odds here once tournament is underway */}
+                      —
                     </td>
                   </tr>
                 );

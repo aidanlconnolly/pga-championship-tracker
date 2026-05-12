@@ -74,14 +74,15 @@ export default function App() {
             background: `
               linear-gradient(
                 180deg,
-                rgba(10,20,10,0.92) 0%,
-                rgba(15,35,15,0.80) 40%,
-                rgba(5,18,8,0.96) 100%
+                rgba(5,12,5,0.82) 0%,
+                rgba(8,22,8,0.65) 50%,
+                rgba(5,12,5,0.88) 100%
               ),
-              url("https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Quail_Hollow_Club.jpg/1280px-Quail_Hollow_Club.jpg")
+              url("/quail-hollow.jpg")
             `,
             backgroundSize: "cover",
-            backgroundPosition: "center 40%",
+            backgroundPosition: "center 42%",
+            filter: "saturate(0.7)",
           }}
         />
         {/* Fallback gradient if image fails */}

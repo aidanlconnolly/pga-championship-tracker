@@ -1,9 +1,7 @@
 import { useState } from "react";
 import type { Picks } from "../types";
-import { PLAYERS_BY_ID, avgPosition } from "../data/players";
+import { PLAYERS_BY_ID } from "../data/players";
 import PlayerTable from "./PlayerTable";
-
-const ALL_PICKED_IDS = new Set<string>();
 
 function PickSection({
   label,
@@ -18,29 +16,27 @@ function PickSection({
   ids: string[];
   darkHorse: string;
 }) {
-  const players = ids.map((id) => PLAYERS_BY_ID[id]).filter(Boolean);
+  // Build player list with DH appended
+  const players = ids
+    .map((id) => PLAYERS_BY_ID[id])
+    .filter(Boolean)
+    .map((p) => ({ ...p, isDarkHorse: false }));
+
   const dh = darkHorse ? PLAYERS_BY_ID[darkHorse] : null;
-  if (dh) players.push(dh);
+  if (dh) players.push({ ...dh, isDarkHorse: true });
 
   return (
     <section>
-      <div className={`flex items-center gap-3 mb-2`}>
+      <div className="flex items-center gap-3 mb-2">
         <h2 className={`text-xl font-bold ${accentClass}`}>{label}</h2>
-        <div className={`h-px flex-1 ${borderClass} opacity-40`} />
+        <div className={`h-px flex-1 opacity-30 ${borderClass}`} />
       </div>
-      {dh && (
-        <p className="text-xs text-slate-500 mb-2">
-          🐴 Dark horse: <span className="text-slate-300">{dh.name}</span>
-        </p>
-      )}
       <PlayerTable players={players} />
     </section>
   );
 }
 
 export default function AnalysisTab({ picks }: { picks: Picks }) {
-  const [avgPosFilter, setAvgPosFilter] = useState<number>(70);
-
   const allPickedIds = new Set([
     ...picks.me.main,
     picks.me.darkHorse,
@@ -48,12 +44,15 @@ export default function AnalysisTab({ picks }: { picks: Picks }) {
     picks.dad.darkHorse,
   ].filter(Boolean));
 
-  // Notable long shots: not picked, sorted by odds desc (highest odds = longest shot)
-  const notableIds = Object.values(PLAYERS_BY_ID)
+  // Top 20 players by odds (lowest odds = biggest favourites) not in either slate
+  const notablePlayers = Object.values(PLAYERS_BY_ID)
     .filter((p) => !allPickedIds.has(p.id))
-    .filter((p) => avgPosition(p.last5) <= avgPosFilter)
-    .sort((a, b) => b.odds - a.odds)
-    .slice(0, 8);
+    .sort((a, b) => a.odds - b.odds)
+    .slice(0, 20)
+    .map((p) => ({ ...p, isDarkHorse: false }));
+
+  const meIds = picks.me.main;
+  const dadIds = picks.dad.main;
 
   return (
     <div className="space-y-8">
@@ -61,7 +60,7 @@ export default function AnalysisTab({ picks }: { picks: Picks }) {
         label="Aidan's Picks"
         accentClass="text-blue-300"
         borderClass="bg-blue-500"
-        ids={picks.me.main}
+        ids={meIds}
         darkHorse={picks.me.darkHorse}
       />
 
@@ -69,35 +68,19 @@ export default function AnalysisTab({ picks }: { picks: Picks }) {
         label="Dad's Picks"
         accentClass="text-orange-300"
         borderClass="bg-orange-500"
-        ids={picks.dad.main}
+        ids={dadIds}
         darkHorse={picks.dad.darkHorse}
       />
 
       <section>
-        <div className="flex items-center gap-4 mb-2 flex-wrap">
-          <h2 className="text-xl font-bold text-slate-300">Notable Long Shots Not Chosen</h2>
-          <div className="flex items-center gap-2 text-sm">
-            <label className="text-slate-400">Avg Pos filter ≤</label>
-            <select
-              value={avgPosFilter}
-              onChange={(e) => setAvgPosFilter(Number(e.target.value))}
-              className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-sm"
-            >
-              <option value={10}>Top 10 avg</option>
-              <option value={20}>Top 20 avg</option>
-              <option value={30}>Top 30 avg</option>
-              <option value={70}>All</option>
-            </select>
-          </div>
+        <div className="flex items-center gap-3 mb-2">
+          <h2 className="text-xl font-bold text-slate-300">Notable Players Not Added</h2>
+          <div className="h-px flex-1 bg-slate-600 opacity-30" />
         </div>
         <p className="text-xs text-slate-500 mb-2">
-          Highest-odds players in the field not selected by either team, sorted by longest odds first.
+          Top 20 players by betting odds not selected by either team.
         </p>
-        {notableIds.length > 0 ? (
-          <PlayerTable players={notableIds} />
-        ) : (
-          <p className="text-slate-500 text-sm">No players match the current filter.</p>
-        )}
+        <PlayerTable players={notablePlayers} />
       </section>
     </div>
   );

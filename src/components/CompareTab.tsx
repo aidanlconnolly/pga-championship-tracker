@@ -17,14 +17,19 @@ function findRow(name: string, rows: LeaderboardResult["rows"] | undefined) {
 
 function fmtScore(s: string | null | undefined) {
   if (!s) return "—";
-  if (s === "E" || s === "EVEN") return "E";
   return s;
 }
 function fmtOdds(n: number) {
-  return n > 0 ? `+${n}` : `${n}`;
+  return n > 0 ? `+${n.toLocaleString()}` : `${n}`;
 }
 function fmtSg(n: number) {
   return (n >= 0 ? "+" : "") + n.toFixed(2);
+}
+
+function avgOdds(ids: string[]): number {
+  const valid = ids.map((id) => PLAYERS_BY_ID[id]?.odds).filter((o): o is number => o != null);
+  if (!valid.length) return 0;
+  return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
 }
 
 export default function CompareTab({
@@ -52,66 +57,96 @@ export default function CompareTab({
 
   const meAvgSg = meIds.reduce((s, id) => s + (PLAYERS_BY_ID[id]?.sgTotal ?? 0), 0) / (meIds.length || 1);
   const dadAvgSg = dadIds.reduce((s, id) => s + (PLAYERS_BY_ID[id]?.sgTotal ?? 0), 0) / (dadIds.length || 1);
+  const meAvgOdds = avgOdds(meIds);
+  const dadAvgOdds = avgOdds(dadIds);
 
   const live = leaderboard && leaderboard.rows.length > 0;
 
-  return (
-    <div className="space-y-4">
-      <div className="grid md:grid-cols-2 gap-4">
-        <UserColumn user="me" ids={meIds} leaderboard={leaderboard} label="Aidan" />
-        <UserColumn user="dad" ids={dadIds} leaderboard={leaderboard} label="Dad" />
-      </div>
+  // Edge = SG advantage; lower tournament score = leading (golf scoring)
+  const sgEdgeMe = meAvgSg - dadAvgSg;
+  const liveEdgeMe = live ? dadTotal - meTotal : null; // positive = me leading
 
+  return (
+    <div className="space-y-6">
+      {/* Head-to-head summary */}
       <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-        <h4 className="text-sm font-semibold text-slate-400 mb-3">Head-to-Head</h4>
-        <div className="grid grid-cols-3 text-center gap-4">
-          <div>
-            <p className="text-xs text-slate-500 mb-1">Avg SG:Total</p>
-            <p className={`text-lg font-bold ${meAvgSg > dadAvgSg ? "text-blue-300" : "text-slate-300"}`}>
-              {meAvgSg.toFixed(2)}
-            </p>
-            <p className={`text-lg font-bold ${dadAvgSg > meAvgSg ? "text-orange-300" : "text-slate-300"}`}>
-              {dadAvgSg.toFixed(2)}
-            </p>
-            <div className="flex justify-between text-xs text-slate-500 mt-1">
-              <span>Aidan</span>
-              <span>Dad</span>
+        <h4 className="text-sm font-semibold text-slate-400 mb-4">Head-to-Head</h4>
+        <div className="grid grid-cols-3 gap-4 text-center text-sm">
+
+          {/* SG:Total avg */}
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">Avg SG:Total</p>
+            <div className="flex justify-between px-4">
+              <span className={`text-lg font-bold ${meAvgSg >= dadAvgSg ? "text-blue-300" : "text-slate-400"}`}>
+                {meAvgSg.toFixed(2)}
+              </span>
+              <span className={`text-lg font-bold ${dadAvgSg >= meAvgSg ? "text-orange-300" : "text-slate-400"}`}>
+                {dadAvgSg.toFixed(2)}
+              </span>
             </div>
+            <p className="text-xs text-slate-500">
+              SG edge: <span className={sgEdgeMe >= 0 ? "text-blue-300" : "text-orange-300"}>
+                {sgEdgeMe >= 0 ? "Aidan" : "Dad"} +{Math.abs(sgEdgeMe).toFixed(2)}
+              </span>
+            </p>
           </div>
-          {live && (
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Tournament Score</p>
-              <p className={`text-lg font-bold ${meTotal < dadTotal ? "text-blue-300" : "text-slate-300"}`}>
-                {meTotal === 0 ? "E" : meTotal > 0 ? `+${meTotal}` : meTotal}
-              </p>
-              <p className={`text-lg font-bold ${dadTotal < meTotal ? "text-orange-300" : "text-slate-300"}`}>
-                {dadTotal === 0 ? "E" : dadTotal > 0 ? `+${dadTotal}` : dadTotal}
-              </p>
-              <div className="flex justify-between text-xs text-slate-500 mt-1">
-                <span>Aidan</span>
-                <span>Dad</span>
-              </div>
+
+          {/* Avg odds */}
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">Avg Odds</p>
+            <div className="flex justify-between px-4">
+              <span className={`text-lg font-bold ${meAvgOdds <= dadAvgOdds ? "text-blue-300" : "text-slate-400"}`}>
+                {fmtOdds(meAvgOdds)}
+              </span>
+              <span className={`text-lg font-bold ${dadAvgOdds <= meAvgOdds ? "text-orange-300" : "text-slate-400"}`}>
+                {fmtOdds(dadAvgOdds)}
+              </span>
             </div>
-          )}
-          <div>
-            <p className="text-xs text-slate-500 mb-1">
-              {live ? "Leading" : "Pre-tourney edge"}
+            <p className="text-xs text-slate-500">
+              Odds edge: <span className={meAvgOdds <= dadAvgOdds ? "text-blue-300" : "text-orange-300"}>
+                {meAvgOdds <= dadAvgOdds ? "Aidan" : "Dad"} (shorter odds)
+              </span>
             </p>
-            <p className="text-lg font-bold text-yellow-300">
-              {live
-                ? meTotal < dadTotal
-                  ? "Aidan"
-                  : dadTotal < meTotal
-                  ? "Dad"
-                  : "Tied"
-                : meAvgSg > dadAvgSg
-                ? "Aidan"
-                : dadAvgSg > meAvgSg
-                ? "Dad"
-                : "Tied"}
-            </p>
+          </div>
+
+          {/* Tournament score */}
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">{live ? "Tournament Score" : "Pre-tourney edge"}</p>
+            {live ? (
+              <>
+                <div className="flex justify-between px-4">
+                  <span className={`text-lg font-bold ${meTotal <= dadTotal ? "text-blue-300" : "text-slate-400"}`}>
+                    {meTotal === 0 ? "E" : meTotal > 0 ? `+${meTotal}` : meTotal}
+                  </span>
+                  <span className={`text-lg font-bold ${dadTotal <= meTotal ? "text-orange-300" : "text-slate-400"}`}>
+                    {dadTotal === 0 ? "E" : dadTotal > 0 ? `+${dadTotal}` : dadTotal}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Leading: <span className="text-yellow-300 font-semibold">
+                    {liveEdgeMe! > 0 ? `Aidan by ${liveEdgeMe}` : liveEdgeMe! < 0 ? `Dad by ${Math.abs(liveEdgeMe!)}` : "Tied"}
+                  </span>
+                </p>
+              </>
+            ) : (
+              <p className="text-yellow-300 font-semibold text-center mt-2">
+                {sgEdgeMe >= 0 ? "Aidan" : "Dad"}
+              </p>
+            )}
           </div>
         </div>
+
+        {/* Labels */}
+        <div className="flex justify-between px-4 mt-3 text-xs text-slate-500 border-t border-slate-800 pt-2">
+          <span className="text-blue-400 font-semibold">Aidan</span>
+          <span className="text-orange-400 font-semibold">Dad</span>
+        </div>
+      </div>
+
+      {/* Side-by-side picks */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <UserColumn user="me" ids={meIds} dhId={picks.me.darkHorse} leaderboard={leaderboard} label="Aidan" />
+        <UserColumn user="dad" ids={dadIds} dhId={picks.dad.darkHorse} leaderboard={leaderboard} label="Dad" />
       </div>
     </div>
   );
@@ -120,11 +155,13 @@ export default function CompareTab({
 function UserColumn({
   user,
   ids,
+  dhId,
   leaderboard,
   label,
 }: {
   user: "me" | "dad";
   ids: string[];
+  dhId: string;
   leaderboard: LeaderboardResult | null;
   label: string;
 }) {
@@ -150,11 +187,15 @@ function UserColumn({
           {ids.map((id, i) => {
             const p = PLAYERS_BY_ID[id];
             const row = p ? findRow(p.name, leaderboard?.rows) : null;
+            const isDH = id === dhId;
             return (
               <tr key={id} className="border-b border-slate-800/50">
-                <td className="py-2 text-slate-500 text-xs">{i === 5 ? "★" : i + 1}</td>
-                <td className="py-2">{p?.name ?? id}</td>
-                <td className="py-2 text-right tabular-nums text-slate-400">
+                <td className="py-2 text-slate-500 text-xs">{isDH ? "🐴" : i + 1}</td>
+                <td className="py-2">
+                  {isDH && <span className="text-slate-400 text-xs mr-1">DH:</span>}
+                  {p?.name ?? id}
+                </td>
+                <td className="py-2 text-right tabular-nums text-slate-400 text-xs">
                   {p ? fmtOdds(p.odds) : "—"}
                 </td>
                 <td className="py-2 text-right tabular-nums text-slate-400">

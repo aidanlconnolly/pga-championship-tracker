@@ -3,6 +3,8 @@ import type { Player } from "../types";
 import { compare, type SortDir } from "../lib/sort";
 import { avgPosition } from "../data/players";
 
+type ExtPlayer = Player & { isDarkHorse?: boolean };
+
 type ColKey = keyof Player | "avgPos";
 
 type Col = {
@@ -34,7 +36,17 @@ function fmtSg(n: number): string {
   return (n >= 0 ? "+" : "") + n.toFixed(2);
 }
 
-export default function PlayerTable({ players }: { players: Player[] }) {
+const finishColor = (r: string) => {
+  if (!r || r === "MC" || r === "WD") return "text-red-400";
+  const n = parseInt(r.replace(/^T/, ""), 10);
+  if (n === 1) return "text-yellow-300 font-bold";
+  if (n <= 5) return "text-emerald-400";
+  if (n <= 10) return "text-blue-300";
+  if (n <= 20) return "text-slate-300";
+  return "text-slate-500";
+};
+
+export default function PlayerTable({ players }: { players: ExtPlayer[] }) {
   const [sortKey, setSortKey] = useState<ColKey>("sgTotal");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -55,16 +67,6 @@ export default function PlayerTable({ players }: { players: Player[] }) {
       setSortKey(key);
       setSortDir(key === "name" ? "asc" : key === "avgPos" || key === "odds" ? "asc" : "desc");
     }
-  };
-
-  const finishColor = (r: string) => {
-    if (!r || r === "MC" || r === "WD") return "text-red-400";
-    const n = parseInt(r.replace(/^T/, ""), 10);
-    if (n === 1) return "text-yellow-300 font-bold";
-    if (n <= 5) return "text-emerald-400";
-    if (n <= 10) return "text-blue-300";
-    if (n <= 20) return "text-slate-300";
-    return "text-slate-500";
   };
 
   return (
@@ -95,7 +97,17 @@ export default function PlayerTable({ players }: { players: Player[] }) {
             >
               <td className="px-3 py-2 whitespace-nowrap">
                 <div className="flex items-center gap-2">
-                  <span>{p.name}</span>
+                  <span>
+                    {p.isDarkHorse ? (
+                      <span>
+                        <span className="text-yellow-400 mr-1">🐴</span>
+                        <span className="text-slate-400 text-xs mr-1">DH:</span>
+                        {p.name}
+                      </span>
+                    ) : (
+                      p.name
+                    )}
+                  </span>
                   <span className="text-xs text-slate-500">{p.country}</span>
                 </div>
               </td>
