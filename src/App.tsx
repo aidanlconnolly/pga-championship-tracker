@@ -10,9 +10,9 @@ import Leaderboard from "./components/Leaderboard";
 import CompareTab from "./components/CompareTab";
 
 const TABS = [
-  { id: "analysis", label: "Analysis" },
   { id: "leaderboard", label: "Leaderboard" },
   { id: "compare", label: "Compare" },
+  { id: "analysis", label: "Initial Analysis" },
 ];
 
 function initPicks(): Picks {
@@ -27,7 +27,7 @@ function initPicks(): Picks {
 }
 
 export default function App() {
-  const [tab, setTab] = useState("analysis");
+  const [tab, setTab] = useState("leaderboard");
   const [picks, setPicks] = useState<Picks>(initPicks);
   const [leaderboard, setLeaderboard] = useState<LeaderboardResult | null>(null);
 
