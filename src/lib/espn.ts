@@ -1,7 +1,7 @@
 import type { LeaderboardRow } from "../types";
 
 const URL =
-  "https://site.api.espn.com/apis/site/v2/sports/golf/pga/leaderboard";
+  "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard";
 
 export type LeaderboardResult = {
   rows: LeaderboardRow[];
@@ -17,24 +17,37 @@ export async function fetchLeaderboard(): Promise<LeaderboardResult> {
   const event = data?.events?.[0];
   const comp = event?.competitions?.[0];
   const competitors: any[] = comp?.competitors ?? [];
+
+  const scoreCounts = new Map<string, number>();
+  for (const c of competitors) {
+    const s = c?.score ?? "";
+    scoreCounts.set(s, (scoreCounts.get(s) ?? 0) + 1);
+  }
+
   const rows: LeaderboardRow[] = competitors.map((c) => {
     const a = c?.athlete ?? {};
-    const stats: any[] = c?.statistics ?? [];
-    const getStat = (key: string) =>
-      stats.find((s) => s.name === key || s.abbreviation === key)?.displayValue ?? "";
+    const ls0 = c?.linescores?.[0];
+    const totalScore: string = c?.score ?? "";
+    const todayRaw: string = ls0?.displayValue ?? "";
+    const today = todayRaw === "-" ? "" : todayRaw;
+    const holesPlayed: number = Array.isArray(ls0?.linescores) ? ls0.linescores.length : 0;
+    const order: number = c?.order ?? 0;
+    const tied = (scoreCounts.get(totalScore) ?? 0) > 1;
+    const position = order ? `${tied ? "T" : ""}${order}` : "";
     return {
       name: a.displayName ?? a.shortName ?? "",
-      position: c?.status?.position?.displayName ?? c?.status?.position?.id ?? "",
-      totalScore: c?.score ?? getStat("scoreToPar") ?? "",
-      today: getStat("today") ?? "",
-      thru: c?.status?.thru != null ? String(c.status.thru) : (c?.status?.type?.shortDetail ?? ""),
-      status: c?.status?.type?.description ?? "",
+      position,
+      totalScore,
+      today,
+      thru: holesPlayed > 0 ? String(holesPlayed) : "",
+      status: comp?.status?.type?.shortDetail ?? "",
     };
   });
+
   return {
     rows,
     eventName: event?.name ?? "",
-    status: comp?.status?.type?.description ?? event?.status?.type?.description ?? "",
+    status: comp?.status?.type?.description ?? "",
     fetchedAt: Date.now(),
   };
 }
