@@ -5,7 +5,7 @@ const PREFERRED_BOOKS = ["draftkings", "fanduel", "williamhill_us", "betmgm", "b
 
 export async function fetchLiveOdds(apiKey: string): Promise<LiveOdds> {
   if (!apiKey) throw new Error("No odds API key configured");
-  const url = `https://api.the-odds-api.com/v4/sports/${SPORT_KEY}/odds?apiKey=${apiKey}&regions=us&markets=outrights`;
+  const url = `https://api.the-odds-api.com/v4/sports/${SPORT_KEY}/odds?apiKey=${apiKey}&regions=us&markets=outrights&oddsFormat=american`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`Odds API ${res.status}`);
   const events: any[] = await res.json();
