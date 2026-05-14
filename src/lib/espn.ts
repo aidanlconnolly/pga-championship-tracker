@@ -7,6 +7,7 @@ export type LeaderboardResult = {
   rows: LeaderboardRow[];
   eventName: string;
   status: string;
+  roundDetail: string;
   fetchedAt: number;
 };
 
@@ -48,6 +49,7 @@ export async function fetchLeaderboard(): Promise<LeaderboardResult> {
     rows,
     eventName: event?.name ?? "",
     status: comp?.status?.type?.description ?? "",
+    roundDetail: comp?.status?.type?.shortDetail ?? "",
     fetchedAt: Date.now(),
   };
 }

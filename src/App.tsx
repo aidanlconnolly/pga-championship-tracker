@@ -4,6 +4,7 @@ import { DEFAULT_PICKS } from "./data/players";
 import { loadPicks, savePicks } from "./lib/storage";
 import { readPicksFromUrl, writePicksToUrl } from "./lib/urlState";
 import type { LeaderboardResult } from "./lib/espn";
+import type { LiveOdds } from "./lib/odds";
 import Tabs from "./components/Tabs";
 import AnalysisTab from "./components/AnalysisTab";
 import Leaderboard from "./components/Leaderboard";
@@ -30,6 +31,7 @@ export default function App() {
   const [tab, setTab] = useState("leaderboard");
   const [picks, setPicks] = useState<Picks>(initPicks);
   const [leaderboard, setLeaderboard] = useState<LeaderboardResult | null>(null);
+  const [liveOdds, setLiveOdds] = useState<LiveOdds | null>(null);
 
   useEffect(() => {
     savePicks(picks);
@@ -107,6 +109,8 @@ export default function App() {
             picks={picks}
             leaderboard={leaderboard}
             onLeaderboard={setLeaderboard}
+            liveOdds={liveOdds}
+            onLiveOdds={setLiveOdds}
           />
         )}
 

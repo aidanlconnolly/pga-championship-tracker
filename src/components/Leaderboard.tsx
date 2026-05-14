@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Picks, Player, LeaderboardRow } from "../types";
 import { PLAYERS_BY_ID } from "../data/players";
 import { fetchLeaderboard, parseScore, type LeaderboardResult } from "../lib/espn";
+import { fetchLiveOdds, lookupOdds, formatOdds, type LiveOdds } from "../lib/odds";
 import Badge from "./Badge";
 
 function normalize(n: string) {
@@ -44,12 +45,14 @@ function TeamSummary({
   borderClass,
   ids,
   rows,
+  liveOdds,
 }: {
   label: string;
   accentClass: string;
   borderClass: string;
   ids: string[];
   rows: LeaderboardResult["rows"];
+  liveOdds: LiveOdds | null;
 }) {
   const live = rows.length > 0;
   const entries = ids.map((id) => {
@@ -69,7 +72,8 @@ function TeamSummary({
         <thead>
           <tr className="text-xs text-slate-500 border-b border-slate-800">
             <th className="pb-1 text-left">Player</th>
-            <th className="pb-1 text-right">Odds</th>
+            <th className="pb-1 text-right">Pre-Tourney</th>
+            {liveOdds && <th className="pb-1 text-right text-yellow-400">Live Odds</th>}
             {live && <th className="pb-1 text-right">Today</th>}
             {live && <th className="pb-1 text-right">Total</th>}
             {live && <th className="pb-1 text-right">Pos</th>}
@@ -79,6 +83,7 @@ function TeamSummary({
         <tbody>
           {entries.map(({ p, row }, i) => {
             const isDH = ids.indexOf(p.id) === 5;
+            const lo = liveOdds ? lookupOdds(p.name, liveOdds) : null;
             return (
               <tr key={p.id} className="border-b border-slate-800/50">
                 <td className="py-1.5">
@@ -88,6 +93,11 @@ function TeamSummary({
                 <td className="py-1.5 text-right tabular-nums text-slate-400 text-xs">
                   {p.odds > 0 ? `+${p.odds.toLocaleString()}` : p.odds}
                 </td>
+                {liveOdds && (
+                  <td className="py-1.5 text-right tabular-nums text-yellow-300 text-xs font-medium">
+                    {lo !== null ? formatOdds(lo) : "—"}
+                  </td>
+                )}
                 {live && (
                   <td className="py-1.5 text-right tabular-nums">{row?.today || "—"}</td>
                 )}
@@ -132,10 +142,14 @@ export default function Leaderboard({
   picks,
   leaderboard,
   onLeaderboard,
+  liveOdds,
+  onLiveOdds,
 }: {
   picks: Picks;
   leaderboard: LeaderboardResult | null;
   onLeaderboard: (r: LeaderboardResult) => void;
+  liveOdds: LiveOdds | null;
+  onLiveOdds: (o: LiveOdds) => void;
 }) {
   const result = leaderboard;
   const [loading, setLoading] = useState(false);
@@ -145,8 +159,13 @@ export default function Leaderboard({
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchLeaderboard();
-      onLeaderboard(data);
+      const [data, odds] = await Promise.allSettled([
+        fetchLeaderboard(),
+        fetchLiveOdds(import.meta.env.VITE_ODDS_API_KEY ?? ""),
+      ]);
+      if (data.status === "fulfilled") onLeaderboard(data.value);
+      else throw data.reason;
+      if (odds.status === "fulfilled") onLiveOdds(odds.value);
     } catch (e: any) {
       setError(e?.message ?? "Failed to fetch");
     } finally {
@@ -171,7 +190,13 @@ export default function Leaderboard({
         </button>
         {result && (
           <span className="text-xs text-slate-400">
-            {result.eventName} · {result.status} · fetched{" "}
+            {result.eventName}
+            {result.roundDetail && (
+              <span className="ml-2 px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 font-medium">
+                {result.roundDetail}
+              </span>
+            )}
+            {" · fetched "}
             {new Date(result.fetchedAt).toLocaleTimeString()}
           </span>
         )}
@@ -189,6 +214,7 @@ export default function Leaderboard({
           borderClass="border-blue-800"
           ids={allMyIds}
           rows={result?.rows ?? []}
+          liveOdds={liveOdds}
         />
         <TeamSummary
           label="Dad"
@@ -196,6 +222,7 @@ export default function Leaderboard({
           borderClass="border-orange-800"
           ids={allDadIds}
           rows={result?.rows ?? []}
+          liveOdds={liveOdds}
         />
       </div>
 
@@ -211,7 +238,7 @@ export default function Leaderboard({
                 <th className="px-3 py-2 text-right">Today</th>
                 <th className="px-3 py-2 text-right">Thru</th>
                 <th className="px-3 py-2 text-right" title="Odds before tournament started">Pre-Tourney Odds</th>
-                <th className="px-3 py-2 text-right" title="Live odds from sportsbooks — update manually">Live Odds</th>
+                <th className="px-3 py-2 text-right text-yellow-400" title="Live odds from DraftKings">Live Odds</th>
               </tr>
             </thead>
             <tbody>
@@ -221,6 +248,7 @@ export default function Leaderboard({
                   const last = normalize(p.name.split(" ").slice(-1)[0]);
                   return normalize(row.name).includes(last);
                 });
+                const lo = liveOdds ? lookupOdds(row.name, liveOdds) : null;
                 return (
                   <tr
                     key={i}
@@ -247,9 +275,8 @@ export default function Leaderboard({
                     <td className="px-3 py-2 text-right tabular-nums text-slate-400 text-xs">
                       {player ? (player.odds > 0 ? `+${player.odds.toLocaleString()}` : player.odds) : "—"}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-yellow-300 text-xs">
-                      {/* Paste live odds here once tournament is underway */}
-                      —
+                    <td className="px-3 py-2 text-right tabular-nums text-yellow-300 text-xs font-medium">
+                      {lo !== null ? formatOdds(lo) : "—"}
                     </td>
                   </tr>
                 );
