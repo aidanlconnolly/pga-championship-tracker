@@ -6,7 +6,7 @@ type Props = {
 
 export default function Tabs({ tabs, active, onChange }: Props) {
   return (
-    <div className="flex gap-1 border-b border-slate-800 mb-4">
+    <div className="flex flex-wrap gap-1 border-b border-slate-800 mb-4">
       {tabs.map((t) => (
         <button
           key={t.id}

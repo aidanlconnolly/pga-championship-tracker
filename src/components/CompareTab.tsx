@@ -71,7 +71,7 @@ export default function CompareTab({
       {/* Head-to-head summary */}
       <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
         <h4 className="text-sm font-semibold text-slate-400 mb-4">Head-to-Head</h4>
-        <div className="grid grid-cols-3 gap-4 text-center text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center text-sm">
 
           {/* SG:Total avg */}
           <div className="space-y-1">
